@@ -6,6 +6,8 @@ import com.jezabel.healthgen.exception.ResourceNotFoundException;
 import com.jezabel.healthgen.repository.PacienteRepository;
 import com.jezabel.healthgen.service.PacienteService;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +19,10 @@ import java.util.stream.Collectors;
 public class PacienteServiceImpl implements PacienteService {
 
     private final PacienteRepository repo;
-    public PacienteServiceImpl(PacienteRepository repo) { this.repo = repo; }
+
+    public PacienteServiceImpl(PacienteRepository repo) {
+        this.repo = repo;
+    }
 
     @Override
     public PacienteDTO crear(PacienteDTO dto) {
@@ -48,17 +53,20 @@ public class PacienteServiceImpl implements PacienteService {
     public PacienteDTO actualizar(Long id, PacienteDTO dto) {
         Paciente p = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
         // Si cambia documento, validar duplicado
         if (dto.getDocumento() != null && !dto.getDocumento().equals(p.getDocumento())
                 && repo.existsByDocumento(dto.getDocumento())) {
             throw new IllegalArgumentException("Documento ya en uso por otro paciente");
         }
+
         p.setNombre(dto.getNombre());
         p.setApellido(dto.getApellido());
         p.setDocumento(dto.getDocumento());
         p.setFechaNacimiento(dto.getFechaNacimiento());
         p.setEmail(dto.getEmail());
         p.setTelefono(dto.getTelefono());
+
         return toDTO(repo.save(p));
     }
 
@@ -69,6 +77,21 @@ public class PacienteServiceImpl implements PacienteService {
         }
         repo.deleteById(id);
     }
+
+    // ========= NUEVO: paginación + búsqueda =========
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PacienteDTO> listarPaginado(String q, Pageable pageable) {
+        if (q == null || q.isBlank()) {
+            return repo.findAll(pageable).map(this::toDTO);
+        }
+        return repo
+                .findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCaseOrDocumentoContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                        q, q, q, q, pageable
+                )
+                .map(this::toDTO);
+    }
+    // ================================================
 
     private PacienteDTO toDTO(Paciente p) {
         PacienteDTO dto = new PacienteDTO();

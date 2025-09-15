@@ -4,6 +4,8 @@ import com.jezabel.healthgen.dto.PacienteDTO;
 import com.jezabel.healthgen.service.PacienteService;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,5 +44,13 @@ public class PacienteController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<Page<PacienteDTO>> listarPaginado(
+            @RequestParam(required = false, defaultValue = "") String q,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(service.listarPaginado(q, pageable));
     }
 }
